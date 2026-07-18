@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+:root {
+	--munch-blue: #0a66ff;
+	--munch-red: #ff5b3c;
+	--munch-green: #13a36b;
+	--munch-ink: #0f172a;
+	--munch-muted: #64748b;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	min-height: 100%;
+}
+
+body {
+	font-family: var(--font-body), "Segoe UI", sans-serif;
+	color: var(--munch-ink);
+	background:
+		radial-gradient(1200px 500px at 20% -20%, #e9f1ff 0%, transparent 60%),
+		radial-gradient(1000px 420px at 100% 120%, #fff2ed 0%, transparent 65%),
+		#ffffff;
+}
+
+.logo-font {
+	font-family: var(--font-logo), "Trebuchet MS", sans-serif;
+}
+
+@keyframes riseIn {
+	from {
+		opacity: 0;
+		transform: translateY(12px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes shrinkToTop {
+	from {
+		transform: translateY(30px) scale(1.05);
+	}
+
+	to {
+		transform: translateY(0) scale(1);
+	}
+}
+
+.animate-rise {
+	animation: riseIn 360ms ease-out both;
+}
+
+.animate-search-shift {
+	animation: shrinkToTop 320ms ease-out both;
+}
