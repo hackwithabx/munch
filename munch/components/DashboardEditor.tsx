@@ -15,6 +15,49 @@ type DashboardEditorProps = {
 
 type EditableLink = Pick<SocialLink, "id" | "platform" | "url" | "display_order">;
 
+const platformDomainRules: Record<string, string[]> = {
+  instagram: ["instagram.com"],
+  twitter: ["twitter.com", "x.com"],
+  x: ["x.com", "twitter.com"],
+  github: ["github.com"],
+  linkedin: ["linkedin.com"],
+  youtube: ["youtube.com", "youtu.be"],
+  website: [],
+};
+
+function normalizeHostname(value: string) {
+  return value.toLowerCase().replace(/^www\./, "");
+}
+
+function validateSocialLink(platform: string, urlValue: string) {
+  const normalizedPlatform = platform.trim().toLowerCase();
+  const rawUrl = urlValue.trim();
+  const withProtocol = /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(withProtocol);
+  } catch {
+    return { ok: false as const, reason: `Invalid URL for ${platform || "platform"}.` };
+  }
+
+  const allowedDomains = platformDomainRules[normalizedPlatform] || [];
+  if (!allowedDomains.length) {
+    return { ok: true as const, url: parsed.toString() };
+  }
+
+  const host = normalizeHostname(parsed.hostname);
+  const domainAllowed = allowedDomains.some((domain) => host === domain || host.endsWith(`.${domain}`));
+  if (!domainAllowed) {
+    return {
+      ok: false as const,
+      reason: `${platform} link must be on ${allowedDomains.join(" or ")}.`,
+    };
+  }
+
+  return { ok: true as const, url: parsed.toString() };
+}
+
 export default function DashboardEditor({ userId, initialProfile, initialLinks }: DashboardEditorProps) {
   const supabase = useMemo(() => createClient(), []);
   const [saving, setSaving] = useState(false);
@@ -65,14 +108,24 @@ export default function DashboardEditor({ userId, initialProfile, initialLinks }
         throw deleteError;
       }
 
-      const sanitized = links
-        .filter((item) => item.platform.trim() && item.url.trim())
-        .map((item, index) => ({
+      const inputLinks = links.filter((item) => item.platform.trim() && item.url.trim());
+      const sanitized: Array<{ profile_id: string; platform: string; url: string; display_order: number; verification_status: "unverified" }> = [];
+
+      for (let index = 0; index < inputLinks.length; index += 1) {
+        const item = inputLinks[index];
+        const check = validateSocialLink(item.platform, item.url);
+        if (!check.ok) {
+          throw new Error(check.reason);
+        }
+
+        sanitized.push({
           profile_id: userId,
           platform: item.platform.trim(),
-          url: item.url.trim(),
+          url: check.url,
           display_order: index,
-        }));
+          verification_status: "unverified",
+        });
+      }
 
       if (sanitized.length) {
         const { error: linksError } = await supabase.from("social_links").insert(sanitized);
@@ -288,6 +341,9 @@ export default function DashboardEditor({ userId, initialProfile, initialLinks }
           >
             Add Social Link
           </button>
+          <p className="text-xs text-slate-500">
+            Platform links are domain-validated and shown as Unverified until ownership checks are completed.
+          </p>
         </div>
       </section>
 

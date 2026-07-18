@@ -31,7 +31,7 @@ async function getProfile(username: string) {
 
   const linksQuery = await supabase
     .from("social_links")
-    .select("id, platform, url, display_order")
+    .select("id, platform, url, display_order, verification_status")
     .eq("profile_id", profile.id)
     .order("display_order", { ascending: true });
 
@@ -119,7 +119,12 @@ export default async function UserCardPage({ params }: { params: Promise<Params>
         {links.length ? (
           <section className="mt-6 flex flex-wrap justify-center gap-2">
             {links.map((link) => (
-              <SocialLinkPill key={link.id} platform={link.platform} url={link.url} />
+              <SocialLinkPill
+                key={link.id}
+                platform={link.platform}
+                url={link.url}
+                verificationStatus={link.verification_status}
+              />
             ))}
           </section>
         ) : null}

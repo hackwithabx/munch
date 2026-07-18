@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Thermometer, TrendingUp } from "lucide-react";
 import TagPill from "@/components/TagPill";
 import type { SearchResult } from "@/lib/types";
 
@@ -41,7 +42,7 @@ export default function ProfileCard({ profile }: ProfileCardProps) {
                 }}
                 className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700"
               >
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                <Thermometer className="h-3.5 w-3.5" />
                 Most Seen
               </button>
             ) : null}
@@ -54,12 +55,26 @@ export default function ProfileCard({ profile }: ProfileCardProps) {
                 }}
                 className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700"
               >
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                <TrendingUp className="h-3.5 w-3.5" />
                 Trending
               </button>
             ) : null}
           </div>
         )}
+        {profile.is_most_seen ? (
+          <div className="mb-3 rounded-xl border border-orange-200 bg-gradient-to-r from-orange-50 via-amber-50 to-emerald-50 px-3 py-2">
+            <div className="flex items-center justify-between gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-orange-700">
+              <span className="inline-flex items-center gap-1">
+                <Thermometer className="h-3.5 w-3.5" />
+                Heat Meter
+              </span>
+              <span>HOT</span>
+            </div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-orange-100">
+              <div className="heat-sweep h-full w-2/3 rounded-full bg-gradient-to-r from-orange-400 via-amber-400 to-emerald-400" />
+            </div>
+          </div>
+        ) : null}
         <p className="truncate text-base font-semibold text-slate-900 group-hover:text-blue-700">
           {profile.display_name || profile.username}
         </p>
