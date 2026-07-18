@@ -101,6 +101,7 @@ async function ensureDummyUser(i, existingMap) {
 
 async function seed() {
   const existingUsers = await listExistingUsers();
+  let contactColumnsAvailable = true;
 
   const pageViewRows = [];
   const searchQueryRows = [];
@@ -113,26 +114,37 @@ async function seed() {
     const username = `demo_${slugify(fullName)}_${i}`.slice(0, 28);
     const bio = `${fullName} is a trusted ${tags[0]} based in ${city}, helping clients with ${tags[1]} and quick support.`.slice(0, 280);
 
-    const { error: profileError } = await supabase
+    const baseProfileUpdate = {
+      username,
+      display_name: fullName,
+      bio,
+      tags,
+      city,
+      avatar_url: `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(fullName)}`,
+      is_public: true,
+    };
+
+    const contactProfileUpdate = {
+      ...baseProfileUpdate,
+      contact_email: `contact+${i}@munch.demo`,
+      phone_number: `+91 90000${String(10000 + i).slice(-5)}`,
+      show_email_public: i % 2 === 0,
+      show_phone_public: i % 3 === 0,
+    };
+
+    let { error: profileError } = await supabase
       .from("profiles")
-      .update({
-        username,
-        display_name: fullName,
-        bio,
-        tags,
-        city,
-        avatar_url: `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(fullName)}`,
-        contact_email: `contact+${i}@munch.demo`,
-        phone_number: `+91 90000${String(10000 + i).slice(-5)}`,
-        show_email_public: i % 2 === 0,
-        show_phone_public: i % 3 === 0,
-        is_public: true,
-      })
+      .update(contactColumnsAvailable ? contactProfileUpdate : baseProfileUpdate)
       .eq("id", id);
 
-    if (profileError) {
-      throw profileError;
+    if (profileError && /contact_email|phone_number|show_email_public|show_phone_public/i.test(profileError.message)) {
+      contactColumnsAvailable = false;
+      console.warn("Optional contact columns are missing; continuing seed without contact visibility fields.");
+      const retry = await supabase.from("profiles").update(baseProfileUpdate).eq("id", id);
+      profileError = retry.error;
     }
+
+    if (profileError) throw profileError;
 
     await supabase.from("social_links").delete().eq("profile_id", id);
 
