@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient, hasValidSupabaseBrowserEnv } from "@/lib/supabase/client";
@@ -23,9 +23,28 @@ export default function AuthForm({ mode, initialUsername = "", redirectTo = "/da
   const [username, setUsername] = useState(initialUsername);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+
+  useEffect(() => {
+    if (cooldownSeconds <= 0) {
+      return;
+    }
+
+    const id = setInterval(() => {
+      setCooldownSeconds((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+
+    return () => clearInterval(id);
+  }, [cooldownSeconds]);
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (cooldownSeconds > 0) {
+      setMessage(`Too many attempts. Please wait ${cooldownSeconds}s before trying again.`);
+      return;
+    }
+
     setLoading(true);
     setMessage(null);
 
@@ -76,7 +95,12 @@ export default function AuthForm({ mode, initialUsername = "", redirectTo = "/da
       router.push(redirectTo);
       router.refresh();
     } catch (error) {
-      if (error instanceof TypeError && error.message.includes("fetch")) {
+      if (error instanceof Error && /rate limit|too many requests/i.test(error.message)) {
+        setCooldownSeconds(120);
+        setMessage(
+          "Email rate limit exceeded. Please wait 2 minutes and try again, or use Login if the account was already created.",
+        );
+      } else if (error instanceof TypeError && error.message.includes("fetch")) {
         setMessage(
           "Cannot reach Supabase. Verify NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local, then restart dev server.",
         );
@@ -91,6 +115,14 @@ export default function AuthForm({ mode, initialUsername = "", redirectTo = "/da
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md items-center px-4 py-10 sm:px-0">
       <section className="w-full rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <div className="mb-4">
+          <Link
+            href="/"
+            className="inline-flex items-center rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-slate-400"
+          >
+            Back to Home
+          </Link>
+        </div>
         <h1 className="text-2xl font-bold text-slate-900">{mode === "signup" ? "Create your Munch card" : "Welcome back"}</h1>
         <p className="mt-1 text-sm text-slate-600">
           {mode === "signup"
@@ -148,10 +180,16 @@ export default function AuthForm({ mode, initialUsername = "", redirectTo = "/da
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || cooldownSeconds > 0}
             className="w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
           >
-            {loading ? "Please wait..." : mode === "signup" ? "Create Account" : "Login"}
+            {loading
+              ? "Please wait..."
+              : cooldownSeconds > 0
+                ? `Try again in ${cooldownSeconds}s`
+                : mode === "signup"
+                  ? "Create Account"
+                  : "Login"}
           </button>
 
           {message ? <p className="text-sm text-slate-600">{message}</p> : null}

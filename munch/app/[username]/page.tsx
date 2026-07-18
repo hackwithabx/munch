@@ -124,6 +124,16 @@ export default async function UserCardPage({ params }: { params: Promise<Params>
           </section>
         ) : null}
 
+        {(profile.show_email_public && profile.contact_email) || (profile.show_phone_public && profile.phone_number) ? (
+          <section className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Public Contact</p>
+            <div className="mt-2 space-y-1">
+              {profile.show_email_public && profile.contact_email ? <p>Email: {profile.contact_email}</p> : null}
+              {profile.show_phone_public && profile.phone_number ? <p>Phone: {profile.phone_number}</p> : null}
+            </div>
+          </section>
+        ) : null}
+
         {(profile.qr_code_url || profile.upi_id || profile.payment_link) && (
           <section className="mt-7 rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -156,6 +166,8 @@ export default async function UserCardPage({ params }: { params: Promise<Params>
             username={profile.username}
             bio={profile.bio}
             city={profile.city}
+            email={profile.show_email_public ? profile.contact_email : null}
+            phone={profile.show_phone_public ? profile.phone_number : null}
             socialLinks={links}
           />
           <CardQRDownload username={profile.username} />

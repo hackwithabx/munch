@@ -48,6 +48,10 @@ export default function DashboardEditor({ userId, initialProfile, initialLinks }
           payment_label: profile.payment_label,
           upi_id: profile.upi_id,
           payment_link: profile.payment_link,
+          contact_email: profile.contact_email,
+          phone_number: profile.phone_number,
+          show_email_public: profile.show_email_public,
+          show_phone_public: profile.show_phone_public,
           is_public: profile.is_public,
         })
         .eq("id", userId);
@@ -194,6 +198,50 @@ export default function DashboardEditor({ userId, initialProfile, initialLinks }
           <div className="space-y-1 text-sm sm:col-span-2">
             <span className="font-medium text-slate-700">Tags (free text)</span>
             <TagInput value={profile.tags || []} onChange={(tags) => setProfile((prev) => ({ ...prev, tags }))} />
+          </div>
+
+          <label className="space-y-1 text-sm">
+            <span className="font-medium text-slate-700">Contact Email</span>
+            <input
+              value={profile.contact_email || ""}
+              onChange={(event) => setProfile((prev) => ({ ...prev, contact_email: event.target.value }))}
+              placeholder="you@example.com"
+              className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:border-blue-300"
+            />
+          </label>
+
+          <div className="space-y-1 text-sm">
+            <span className="font-medium text-slate-700">Display Email Publicly</span>
+            <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
+              <input
+                type="checkbox"
+                checked={profile.show_email_public}
+                onChange={(event) => setProfile((prev) => ({ ...prev, show_email_public: event.target.checked }))}
+              />
+              <span>{profile.show_email_public ? "Visible on card" : "Hidden"}</span>
+            </label>
+          </div>
+
+          <label className="space-y-1 text-sm">
+            <span className="font-medium text-slate-700">Phone Number</span>
+            <input
+              value={profile.phone_number || ""}
+              onChange={(event) => setProfile((prev) => ({ ...prev, phone_number: event.target.value }))}
+              placeholder="+91 98765 43210"
+              className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:border-blue-300"
+            />
+          </label>
+
+          <div className="space-y-1 text-sm">
+            <span className="font-medium text-slate-700">Display Phone Publicly</span>
+            <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
+              <input
+                type="checkbox"
+                checked={profile.show_phone_public}
+                onChange={(event) => setProfile((prev) => ({ ...prev, show_phone_public: event.target.checked }))}
+              />
+              <span>{profile.show_phone_public ? "Visible on card" : "Hidden"}</span>
+            </label>
           </div>
         </div>
       </section>

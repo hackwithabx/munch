@@ -14,6 +14,7 @@ import type { SearchResult } from "@/lib/types";
 type TrendingResponse = {
   recentlyJoined: SearchResult[];
   popular: SearchResult[];
+  weeklyTrending: SearchResult[];
   peopleSearchingFor: string[];
 };
 
@@ -39,6 +40,7 @@ export default function HomePageClient({ initialQuery = "", showConfigWarning = 
   const [trending, setTrending] = useState<TrendingResponse>({
     recentlyJoined: [],
     popular: [],
+    weeklyTrending: [],
     peopleSearchingFor: [],
   });
 
@@ -48,9 +50,6 @@ export default function HomePageClient({ initialQuery = "", showConfigWarning = 
     const controller = new AbortController();
 
     const loadTrending = async () => {
-      if (!isEmptyState) {
-        return;
-      }
       try {
         const response = await fetch("/api/search?mode=trending", { signal: controller.signal });
         if (!response.ok) return;
@@ -64,7 +63,7 @@ export default function HomePageClient({ initialQuery = "", showConfigWarning = 
     void loadTrending();
 
     return () => controller.abort();
-  }, [isEmptyState]);
+  }, []);
 
   useEffect(() => {
     const normalized = query.trim();
@@ -128,6 +127,8 @@ export default function HomePageClient({ initialQuery = "", showConfigWarning = 
     }
   };
 
+  const topTrendingCards = (trending.weeklyTrending.length ? trending.weeklyTrending : trending.popular).slice(0, 5);
+
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 pb-10 sm:px-6">
       {showConfigWarning ? <SupabaseConfigBanner className="mt-5" /> : null}
@@ -149,6 +150,7 @@ export default function HomePageClient({ initialQuery = "", showConfigWarning = 
 
         {isEmptyState ? (
           <>
+            <TrendingStrip title="Trending Now" items={trending.weeklyTrending} />
             <TrendingStrip title="Recently Joined" items={trending.recentlyJoined} />
             <TrendingStrip title="Popular This Week" items={trending.popular} />
             {trending.peopleSearchingFor.length ? (
@@ -172,14 +174,49 @@ export default function HomePageClient({ initialQuery = "", showConfigWarning = 
             ) : null}
           </>
         ) : (
-          <div className="mt-8 w-full max-w-4xl space-y-4">
-            <SearchResults query={submittedQuery} results={results} loading={loading} />
-            <ClaimUsernameCTA usernameCandidate={submittedQuery} show={!loading && claimUsername} />
+          <div className="mt-8 w-full max-w-6xl lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6">
+            <div className="space-y-4">
+              <SearchResults query={submittedQuery} results={results} loading={loading} />
+              <ClaimUsernameCTA usernameCandidate={submittedQuery} show={!loading && claimUsername} />
+            </div>
+
+            <aside className="mt-6 lg:mt-0">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:sticky lg:top-6">
+                <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Top 5 Trending Cards</h3>
+                <div className="mt-4 space-y-2">
+                  {topTrendingCards.map((profile, index) => (
+                    <Link
+                      key={profile.username}
+                      href={`/${profile.username}`}
+                      className="flex items-center gap-3 rounded-xl border border-slate-100 px-3 py-2 transition hover:border-slate-200 hover:bg-slate-50"
+                    >
+                      <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">
+                        {index + 1}
+                      </span>
+                      <img
+                        src={profile.avatar_url || "/globe.svg"}
+                        alt={profile.display_name || profile.username}
+                        className="h-9 w-9 rounded-full border border-slate-200 object-cover"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-900">
+                          {profile.display_name || profile.username}
+                        </p>
+                        <p className="truncate text-xs text-slate-500">@{profile.username}</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </aside>
           </div>
         )}
       </section>
 
       <footer className="mt-auto pt-10 text-center text-xs text-slate-500">
+        <Link href="/trending" className="mr-3 font-semibold text-emerald-700 hover:text-emerald-800">
+          Explore Trending
+        </Link>
         Munch - find anyone, instantly.
       </footer>
     </main>

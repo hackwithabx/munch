@@ -46,6 +46,10 @@ Required for core app:
 Optional for AI bio generation:
 - `OPENAI_API_KEY`
 
+Required for admin seeding script:
+- `SUPABASE_SERVICE_ROLE_KEY`
+- optional `DUMMY_CARD_COUNT`
+
 Files:
 - `.env.example`
 - `.env.local.example`
@@ -74,6 +78,16 @@ Creates:
 
 Purpose:
 - power insights like top search terms / "people are searching for"
+
+### 0003_public_contact_fields.sql
+Path:
+- `munch/supabase/migrations/0003_public_contact_fields.sql`
+
+Creates:
+- `profiles.contact_email`
+- `profiles.phone_number`
+- `profiles.show_email_public`
+- `profiles.show_phone_public`
 
 ## 6) Routes
 
@@ -113,6 +127,7 @@ Public card:
 - Download card URL QR
 - View tracking ping
 - Home navigation via Munch logo and Home button
+- Optional public contact block (email/phone visibility toggles)
 
 Analytics and insights:
 - Owner-facing view counts
@@ -152,6 +167,9 @@ Build:
 
 Lint:
 - `npm run lint`
+
+Seed dummy cards (admin env required):
+- `npm run seed:dummy`
 
 From parent folder, use:
 - `npm --prefix /Users/abhishektiwari/Munch/munch run dev`
@@ -195,3 +213,19 @@ Append updates in a short changelog section below.
 - Added analytics capabilities for most-seen cards, trending cards, and top searched terms.
 - Added API route `/api/log-search` and tracking table migration for search intent insights.
 - Recorded Git commit for full app implementation and context documentation (`9def3bf`).
+- Improved auth UX for Supabase rate-limit errors with explicit guidance during signup/login.
+- Added homepage "Trending Now" strip powered by weekly page-view analytics.
+- Added small green trending badges on profile cards for "Most Seen" and "Trending" markers.
+- Added dedicated `/trending` page showing ranked weekly trending and most-seen cards.
+- Made trend badges on cards clickable to navigate to `/trending`.
+- Added explicit "Back to Home" action on signup/login screens.
+- Added right-side boxed "Top 5 Trending Cards" sidebar in homepage search results view.
+
+### 2026-07-19 (current)
+- Added signup cooldown behavior: when rate-limited, form disables submit for 120s and shows countdown.
+- Added dashboard controls for `contact_email`, `phone_number`, and public visibility toggles.
+- Added public card contact section that only shows enabled public fields.
+- Extended vCard export to include optional email/phone values.
+- Added migration `0003_public_contact_fields.sql` for contact + visibility fields.
+- Added admin seeding script `scripts/seedDummyCards.mjs` and npm command `seed:dummy`.
+- Build passes after changes; seeding is blocked until `SUPABASE_SERVICE_ROLE_KEY` is configured in `.env.local`.

@@ -18,6 +18,10 @@ export type Profile = {
   payment_label: string | null;
   upi_id: string | null;
   payment_link: string | null;
+  contact_email: string | null;
+  phone_number: string | null;
+  show_email_public: boolean;
+  show_phone_public: boolean;
   is_public: boolean;
   view_count: number;
   created_at: string;
@@ -36,7 +40,10 @@ export type SocialLink = {
 export type SearchResult = Pick<
   Profile,
   "username" | "display_name" | "bio" | "avatar_url" | "tags" | "city"
->;
+> & {
+  is_most_seen?: boolean;
+  is_trending?: boolean;
+};
 
 export type Database = {
   public: {

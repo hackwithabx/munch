@@ -2,22 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { SearchResult } from "@/lib/types";
 
+function toTrendingSet(items: Array<{ username: string }> | null | undefined) {
+  return new Set((items || []).map((item) => item.username));
+}
+
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const query = request.nextUrl.searchParams.get("q")?.trim() || "";
   const mode = request.nextUrl.searchParams.get("mode");
 
   if (mode === "trending") {
-    const [{ data: recentlyJoined }, { data: popular }, { data: searchRows }] = await Promise.all([
+    const [{ data: recentlyJoined }, { data: popular }, { data: searchRows }, { data: weeklyViewsRows }] = await Promise.all([
       supabase
         .from("profiles")
-        .select("username, display_name, bio, avatar_url, tags, city")
+        .select("username, display_name, bio, avatar_url, tags, city, view_count")
         .eq("is_public", true)
         .order("created_at", { ascending: false })
         .limit(10),
       supabase
         .from("profiles")
-        .select("username, display_name, bio, avatar_url, tags, city")
+        .select("username, display_name, bio, avatar_url, tags, city, view_count")
         .eq("is_public", true)
         .order("view_count", { ascending: false })
         .limit(10),
@@ -26,6 +30,11 @@ export async function GET(request: NextRequest) {
         .select("normalized_query, searched_at")
         .gte("searched_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
         .limit(500),
+      supabase
+        .from("page_views")
+        .select("profile_id, viewed_at")
+        .gte("viewed_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+        .limit(3000),
     ]);
 
     const searchCounts = new Map<string, number>();
@@ -40,9 +49,56 @@ export async function GET(request: NextRequest) {
       .slice(0, 8)
       .map(([query]) => query);
 
+    const weeklyByProfile = new Map<string, number>();
+    (weeklyViewsRows || []).forEach((row) => {
+      const profileId = row.profile_id;
+      weeklyByProfile.set(profileId, (weeklyByProfile.get(profileId) || 0) + 1);
+    });
+
+    const profileIds = Array.from(weeklyByProfile.keys());
+    const weeklyProfilesQuery = profileIds.length
+      ? await supabase
+          .from("profiles")
+          .select("id, username, display_name, bio, avatar_url, tags, city")
+          .in("id", profileIds)
+          .eq("is_public", true)
+      : { data: [] as Array<{ id: string; username: string; display_name: string | null; bio: string | null; avatar_url: string | null; tags: string[] | null; city: string | null }> };
+
+    const weeklyTrending = (weeklyProfilesQuery.data || [])
+      .map((item) => ({
+        username: item.username,
+        display_name: item.display_name,
+        bio: item.bio,
+        avatar_url: item.avatar_url,
+        tags: item.tags || [],
+        city: item.city,
+        is_trending: true,
+      }))
+      .sort(
+        (a, b) =>
+          (weeklyByProfile.get((weeklyProfilesQuery.data || []).find((row) => row.username === b.username)?.id || "") || 0) -
+          (weeklyByProfile.get((weeklyProfilesQuery.data || []).find((row) => row.username === a.username)?.id || "") || 0),
+      )
+      .slice(0, 10);
+
+    const mostSeenUsernames = toTrendingSet((popular || []).slice(0, 3).map((item) => ({ username: item.username })));
+
+    const recentlyJoinedEnriched = (recentlyJoined || []).map((item) => ({
+      ...item,
+      tags: item.tags || [],
+      is_most_seen: mostSeenUsernames.has(item.username),
+    }));
+
+    const popularEnriched = (popular || []).map((item, index) => ({
+      ...item,
+      tags: item.tags || [],
+      is_most_seen: index === 0 || mostSeenUsernames.has(item.username),
+    }));
+
     return NextResponse.json({
-      recentlyJoined: recentlyJoined || [],
-      popular: popular || [],
+      recentlyJoined: recentlyJoinedEnriched,
+      popular: popularEnriched,
+      weeklyTrending,
       peopleSearchingFor,
     });
   }
@@ -62,6 +118,40 @@ export async function GET(request: NextRequest) {
   }
 
   const rows = (data || []) as SearchResult[];
+
+  const [{ data: mostSeenRows }, { data: weeklyViewsRows }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("username")
+      .eq("is_public", true)
+      .order("view_count", { ascending: false })
+      .limit(3),
+    supabase
+      .from("page_views")
+      .select("profile_id, viewed_at")
+      .gte("viewed_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+      .limit(3000),
+  ]);
+
+  const weeklyByProfile = new Map<string, number>();
+  (weeklyViewsRows || []).forEach((row) => {
+    weeklyByProfile.set(row.profile_id, (weeklyByProfile.get(row.profile_id) || 0) + 1);
+  });
+
+  const weeklyIds = Array.from(weeklyByProfile.keys());
+  const weeklyProfilesQuery = weeklyIds.length
+    ? await supabase.from("profiles").select("id, username").in("id", weeklyIds).eq("is_public", true)
+    : { data: [] as Array<{ id: string; username: string }> };
+
+  const weeklyTrendingSet = new Set(
+    (weeklyProfilesQuery.data || [])
+      .sort((a, b) => (weeklyByProfile.get(b.id) || 0) - (weeklyByProfile.get(a.id) || 0))
+      .slice(0, 5)
+      .map((row) => row.username),
+  );
+
+  const mostSeenSet = toTrendingSet(mostSeenRows as Array<{ username: string }> | null);
+
   const q = query.toLowerCase();
   const results = rows.filter((row) => {
     const tags = row.tags || [];
@@ -74,5 +164,11 @@ export async function GET(request: NextRequest) {
     );
   });
 
-  return NextResponse.json({ results: results.slice(0, 20) });
+  return NextResponse.json({
+    results: results.slice(0, 20).map((row) => ({
+      ...row,
+      is_most_seen: mostSeenSet.has(row.username),
+      is_trending: weeklyTrendingSet.has(row.username),
+    })),
+  });
 }

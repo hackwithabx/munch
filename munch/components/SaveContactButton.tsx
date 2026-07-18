@@ -5,6 +5,8 @@ type SaveContactButtonProps = {
   username: string;
   bio?: string | null;
   city?: string | null;
+  email?: string | null;
+  phone?: string | null;
   socialLinks?: { platform: string; url: string }[];
 };
 
@@ -13,6 +15,8 @@ export default function SaveContactButton({
   username,
   bio,
   city,
+  email,
+  phone,
   socialLinks = [],
 }: SaveContactButtonProps) {
   const onDownload = () => {
@@ -24,6 +28,8 @@ export default function SaveContactButton({
       `N:${displayName};;;`,
       `NOTE:${(bio || "").replace(/\n/g, " ")}`,
       city ? `ADR:;;;${city};;;;` : "",
+      email ? `EMAIL:${email}` : "",
+      phone ? `TEL:${phone}` : "",
       `URL:${website}`,
       ...socialLinks.map((item) => `URL:${item.url}`),
       "END:VCARD",
