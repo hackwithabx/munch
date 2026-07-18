@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { TrendingUp } from "lucide-react";
 import MunchLogo from "@/components/MunchLogo";
 import SearchBar from "@/components/SearchBar";
 import SearchResults from "@/components/SearchResults";
@@ -174,15 +175,19 @@ export default function HomePageClient({ initialQuery = "", showConfigWarning = 
             ) : null}
           </>
         ) : (
-          <div className="mt-8 w-full max-w-6xl lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6">
+          <div className="mt-8 w-full max-w-6xl md:grid md:grid-cols-[minmax(0,1fr)_320px] md:gap-6">
             <div className="space-y-4">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Search Results</h2>
               <SearchResults query={submittedQuery} results={results} loading={loading} />
               <ClaimUsernameCTA usernameCandidate={submittedQuery} show={!loading && claimUsername} />
             </div>
 
-            <aside className="mt-6 lg:mt-0">
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:sticky lg:top-6">
-                <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Top 5 Trending Cards</h3>
+            <aside className="mt-6 md:mt-0">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:sticky md:top-6">
+                <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                  <TrendingUp size={14} className="text-emerald-600" />
+                  Top 5 Trending Cards
+                </h3>
                 <div className="mt-4 space-y-2">
                   {topTrendingCards.map((profile, index) => (
                     <Link

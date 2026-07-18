@@ -25,7 +25,7 @@ export default function SearchResults({ query, results, loading }: SearchResults
   }
 
   return (
-    <div className="animate-rise space-y-3">
+    <div className="animate-rise flex flex-col gap-3">
       {results.map((profile) => (
         <ProfileCard key={profile.username} profile={profile} />
       ))}
