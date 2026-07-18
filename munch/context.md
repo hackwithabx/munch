@@ -189,3 +189,9 @@ Append updates in a short changelog section below.
 - Added insights stack (`search_queries`, log endpoint, homepage trending terms, analytics cards).
 - Added migration `0002_search_insights.sql`.
 - Migrated request gate from `middleware.ts` to `proxy.ts`.
+
+### 2026-07-19 (latest)
+- Made homepage Munch logo clickable to navigate to `/`.
+- Added analytics capabilities for most-seen cards, trending cards, and top searched terms.
+- Added API route `/api/log-search` and tracking table migration for search intent insights.
+- Recorded Git commit for full app implementation and context documentation (`9def3bf`).
