@@ -18,6 +18,10 @@ export type Profile = {
   payment_label: string | null;
   upi_id: string | null;
   payment_link: string | null;
+  custom_section_title: string | null;
+  custom_section_content: string | null;
+  resume_url: string | null;
+  resume_filename: string | null;
   contact_email: string | null;
   phone_number: string | null;
   show_email_public: boolean;
@@ -44,6 +48,10 @@ export type SearchResult = Pick<
   Profile,
   "username" | "display_name" | "bio" | "avatar_url" | "tags" | "city"
 > & {
+  id?: string;
+  view_count?: number;
+  chased_count?: number;
+  seen_count?: number;
   is_most_seen?: boolean;
   is_trending?: boolean;
 };
@@ -101,6 +109,80 @@ export type Database = {
           normalized_query?: string;
           source?: string | null;
           searched_at?: string;
+        };
+        Relationships: [];
+      };
+      link_clicks: {
+        Row: {
+          id: string;
+          profile_id: string;
+          social_link_id: string | null;
+          platform: string;
+          url: string;
+          clicked_at: string;
+          referrer: string | null;
+          user_agent: string | null;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          social_link_id?: string | null;
+          platform: string;
+          url: string;
+          clicked_at?: string;
+          referrer?: string | null;
+          user_agent?: string | null;
+        };
+        Update: {
+          social_link_id?: string | null;
+          platform?: string;
+          url?: string;
+          clicked_at?: string;
+          referrer?: string | null;
+          user_agent?: string | null;
+        };
+        Relationships: [];
+      };
+      profile_chases: {
+        Row: {
+          id: string;
+          chaser_profile_id: string;
+          target_profile_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          chaser_profile_id: string;
+          target_profile_id: string;
+          created_at?: string;
+        };
+        Update: {
+          chaser_profile_id?: string;
+          target_profile_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      chase_notes: {
+        Row: {
+          id: string;
+          chaser_profile_id: string;
+          target_profile_id: string;
+          note: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          chaser_profile_id: string;
+          target_profile_id: string;
+          note?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          note?: string;
+          updated_at?: string;
         };
         Relationships: [];
       };

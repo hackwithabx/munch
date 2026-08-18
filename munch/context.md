@@ -89,6 +89,54 @@ Creates:
 - `profiles.show_email_public`
 - `profiles.show_phone_public`
 
+### 0004_social_link_verification.sql
+Path:
+- `munch/supabase/migrations/0004_social_link_verification.sql`
+
+Creates:
+- `social_links.verification_status`
+- `social_links.verification_note`
+- `social_links.verified_at`
+
+Purpose:
+- supports trust labels for social links (unverified, pending, verified)
+
+### 0005_link_clicks.sql
+Path:
+- `munch/supabase/migrations/0005_link_clicks.sql`
+
+Creates:
+- `link_clicks` table for per-link click tracking
+- indexes for profile/time/link lookups
+- RLS policies for public insert + owner-only select
+
+Purpose:
+- enables real link performance analytics (top platforms, recent clicks, weekly totals)
+
+### 0006_profile_chases.sql
+Path:
+- `munch/supabase/migrations/0006_profile_chases.sql`
+
+Creates:
+- `profile_chases` relationship table (chaser -> target)
+- unique anti-duplicate constraint and no-self-chase rule
+- indexes and RLS policies for chase lifecycle
+
+Purpose:
+- powers "Start Chasing" and "Drop Card" features and real `Chased By` counts
+
+### 0007_chase_notes.sql
+Path:
+- `munch/supabase/migrations/0007_chase_notes.sql`
+
+Creates:
+- `chase_notes` table for private per-card notes for chased cards
+- ownership-based RLS policies
+- updated_at trigger
+
+Purpose:
+- lets users keep private context/reminders for cards they chase
+
 ## 6) Routes
 
 Pages:
@@ -115,25 +163,34 @@ Auth + profile:
 
 Homepage search engine behavior:
 - Debounced search
-- Empty-state trending sections
+- Right-side trending cards panel
 - "Surprise Me" button
 - Claim username CTA when no results and handle-like query
 - "New to Munch? Make your Card" CTA
+- Logged-in user quick actions on homepage (View Card, Go to Dashboard)
 
 Public card:
 - Avatar, bio, tags, city, social links
+- Seen count badge (view_count) shown on card
+- Chased By count badge (derived from `profile_chases`)
 - Payment display section (display-only fields)
 - Save Contact `.vcf`
 - Download card URL QR
 - View tracking ping
 - Home navigation via Munch logo and Home button
 - Optional public contact block (email/phone visibility toggles)
+- Social link verification labels
+- Start Chasing / Drop Card action for logged-in viewers (non-owner)
 
 Analytics and insights:
 - Owner-facing view counts
 - Most seen cards (all-time)
 - Trending cards (weekly)
 - People are searching for (weekly)
+- Interactive dashboard analytics UI (window toggle, trend graph, KPI cards, ranking sections)
+- Real link-click analytics (weekly/all-time counts, top platforms, recent click feed)
+- Dashboard list of cards user is currently chasing with drop controls
+- Dashboard chasing notes with save/update/delete behavior
 
 AI bio:
 - Dashboard button: "Write Bio with AI"
@@ -186,6 +243,8 @@ As of latest update:
 - Build passes.
 - Search/surprise/profile routes work with migrated DB.
 - Insights logging endpoint is implemented; requires `0002_search_insights.sql` to be applied.
+- Homepage sidebar now shows only trending cards and no sidebar metric tiles.
+- Public card page shows seen/view count directly under username.
 
 ## 13) Update Policy For This File
 
@@ -229,3 +288,22 @@ Append updates in a short changelog section below.
 - Added migration `0003_public_contact_fields.sql` for contact + visibility fields.
 - Added admin seeding script `scripts/seedDummyCards.mjs` and npm command `seed:dummy`.
 - Build passes after changes; seeding is blocked until `SUPABASE_SERVICE_ROLE_KEY` is configured in `.env.local`.
+
+### 2026-07-19 (latest)
+- Added migration `0004_social_link_verification.sql` for social link verification metadata.
+- Added verification-aware social link rendering on public card and validation-aware social link editing in dashboard.
+- Upgraded dashboard analytics area with a richer interactive UI component and improved dashboard shell styling.
+- Homepage updates: removed horizontal/hero intro trending window, added logged-in identity shortcut, and refined right sidebar behavior.
+- Homepage sidebar now shows only trending cards and removed Cards Matched/Cards Seen metric number tiles.
+- Public profile card now visibly shows seen count as "Seen X times" after opening a card.
+- Search UX remains vertical, paginated, and build-validated after all updates.
+- Added `0005_link_clicks.sql` and API route `/api/track-link-click` for production link-click tracking.
+- Public card links now send real click events via `TrackedExternalLink` before opening external URLs.
+- Added Smart Links performance visibility in dashboard analytics (weekly clicks, all-time clicks, top platforms, recent link click log).
+- Added `0006_profile_chases.sql` and API route `/api/chase` for production Start Chasing/Drop Card workflow.
+- Public profile now supports Start Chasing and Drop Card for logged-in non-owners.
+- Dashboard now includes "Cards You Are Chasing" list with drop actions.
+- Semantics updated across card UI: `Chased By` is chase-count; `Seen` is view-count.
+- Added mutual chase detection and indicator on public profiles.
+- Added analytics conversion funnel: Seen / Chased / Clicked metrics and rates.
+- Added `0007_chase_notes.sql` and API route `/api/chase-note` for private note-taking on chased cards.

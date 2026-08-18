@@ -16,7 +16,7 @@ export default async function TrendingPage() {
   const [mostSeenQuery, weeklyViewsQuery] = await Promise.all([
     supabase
       .from("profiles")
-      .select("username, display_name, bio, avatar_url, tags, city")
+      .select("username, display_name, bio, avatar_url, tags, city, view_count")
       .eq("is_public", true)
       .order("view_count", { ascending: false })
       .limit(24),
@@ -41,7 +41,7 @@ export default async function TrendingPage() {
   const weeklyProfilesQuery = weeklyIds.length
     ? await supabase
         .from("profiles")
-        .select("id, username, display_name, bio, avatar_url, tags, city")
+        .select("id, username, display_name, bio, avatar_url, tags, city, view_count")
         .in("id", weeklyIds)
         .eq("is_public", true)
     : {
@@ -53,6 +53,7 @@ export default async function TrendingPage() {
           avatar_url: string | null;
           tags: string[] | null;
           city: string | null;
+          view_count: number;
         }>,
       };
 
@@ -64,12 +65,39 @@ export default async function TrendingPage() {
       avatar_url: profile.avatar_url,
       tags: profile.tags || [],
       city: profile.city,
+      view_count: profile.view_count,
       is_trending: true,
       _rank: weeklyByProfile.get(profile.id) || 0,
     }))
     .sort((a, b) => b._rank - a._rank)
     .slice(0, 24)
     .map(({ _rank, ...rest }) => rest as SearchResult);
+
+  const chaseIds = Array.from(
+    new Set([
+      ...mostSeen.map((item) => item.id).filter((id): id is string => Boolean(id)),
+      ...weeklyTrending.map((item) => item.id).filter((id): id is string => Boolean(id)),
+    ]),
+  );
+
+  const chaseRowsQuery = chaseIds.length
+    ? await supabase.from("profile_chases").select("target_profile_id").in("target_profile_id", chaseIds)
+    : { data: [] as Array<{ target_profile_id: string }> };
+
+  const chasedByMap = new Map<string, number>();
+  (chaseRowsQuery.data || []).forEach((row) => {
+    chasedByMap.set(row.target_profile_id, (chasedByMap.get(row.target_profile_id) || 0) + 1);
+  });
+
+  const mostSeenWithChase = mostSeen.map((item) => ({
+    ...item,
+    chased_count: item.id ? chasedByMap.get(item.id) || 0 : 0,
+  }));
+
+  const weeklyTrendingWithChase = weeklyTrending.map((item) => ({
+    ...item,
+    chased_count: item.id ? chasedByMap.get(item.id) || 0 : 0,
+  }));
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-6xl px-4 py-8 sm:px-6">
@@ -93,7 +121,7 @@ export default async function TrendingPage() {
       <section className="mt-7">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Trending This Week</h2>
         <div className="grid gap-3">
-          {weeklyTrending.map((profile) => (
+          {weeklyTrendingWithChase.map((profile) => (
             <ProfileCard key={`weekly-${profile.username}`} profile={profile} />
           ))}
         </div>
@@ -102,7 +130,7 @@ export default async function TrendingPage() {
       <section className="mt-10">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Most Seen All Time</h2>
         <div className="grid gap-3">
-          {mostSeen.map((profile) => (
+          {mostSeenWithChase.map((profile) => (
             <ProfileCard key={`all-${profile.username}`} profile={profile} />
           ))}
         </div>

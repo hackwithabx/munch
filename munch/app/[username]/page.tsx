@@ -3,11 +3,14 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import TagPill from "@/components/TagPill";
-import SocialLinkPill from "@/components/SocialLinkPill";
 import SaveContactButton from "@/components/SaveContactButton";
 import CardQRDownload from "@/components/CardQRDownload";
 import TrackViewPing from "@/components/TrackViewPing";
 import MunchLogo from "@/components/MunchLogo";
+import SmartLinksSection from "@/components/SmartLinksSection";
+import PublicCardActions from "@/components/PublicCardActions";
+import TrackedExternalLink from "@/components/TrackedExternalLink";
+import StartChasingButton from "@/components/StartChasingButton";
 import type { Profile, SocialLink } from "@/lib/types";
 
 type Params = {
@@ -37,9 +40,15 @@ async function getProfile(username: string) {
 
   const links = (linksQuery.data || []) as SocialLink[];
 
+  const chasedByQuery = await supabase
+    .from("profile_chases")
+    .select("id", { count: "exact", head: true })
+    .eq("target_profile_id", profile.id);
+
   return {
     profile,
     links,
+    chasedByCount: chasedByQuery.count ?? 0,
   };
 }
 
@@ -80,6 +89,34 @@ export default async function UserCardPage({ params }: { params: Promise<Params>
 
   const { profile, links } = data;
   const displayName = profile.display_name || profile.username;
+  const featuredLink = links.find((link) => link.verification_status === "verified") || links[0] || null;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const isOwnProfile = user?.id === profile.id;
+  let isChasing = false;
+  let isMutual = false;
+
+  if (user && !isOwnProfile) {
+    const [chaseQuery, reverseQuery] = await Promise.all([
+      supabase
+        .from("profile_chases")
+        .select("id")
+        .eq("chaser_profile_id", user.id)
+        .eq("target_profile_id", profile.id)
+        .maybeSingle(),
+      supabase
+        .from("profile_chases")
+        .select("id")
+        .eq("chaser_profile_id", profile.id)
+        .eq("target_profile_id", user.id)
+        .maybeSingle(),
+    ]);
+    isChasing = Boolean(chaseQuery.data?.id);
+    isMutual = Boolean(chaseQuery.data?.id) && Boolean(reverseQuery.data?.id);
+  }
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-2xl px-4 py-10 sm:px-6">
@@ -104,6 +141,22 @@ export default async function UserCardPage({ params }: { params: Promise<Params>
           />
           <h1 className="mt-4 text-3xl font-bold text-slate-900">{displayName}</h1>
           <p className="mt-1 text-sm text-slate-500">@{profile.username}</p>
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            <p className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+              Chased By {data.chasedByCount}
+            </p>
+            <p className="inline-flex items-center rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-orange-700">
+              Seen {profile.view_count}
+            </p>
+          </div>
+          {user && !isOwnProfile ? (
+            <StartChasingButton
+              targetProfileId={profile.id}
+              initialIsChasing={isChasing}
+              initialChasedByCount={data.chasedByCount}
+              initialIsMutual={isMutual}
+            />
+          ) : null}
           {profile.city ? <p className="mt-2 text-sm text-slate-600">{profile.city}</p> : null}
           {profile.bio ? <p className="mt-4 max-w-xl text-sm leading-6 text-slate-700">{profile.bio}</p> : null}
         </header>
@@ -116,18 +169,25 @@ export default async function UserCardPage({ params }: { params: Promise<Params>
           </section>
         ) : null}
 
-        {links.length ? (
-          <section className="mt-6 flex flex-wrap justify-center gap-2">
-            {links.map((link) => (
-              <SocialLinkPill
-                key={link.id}
-                platform={link.platform}
-                url={link.url}
-                verificationStatus={link.verification_status}
-              />
-            ))}
+        <PublicCardActions username={profile.username} />
+
+        {featuredLink ? (
+          <section className="mt-6 rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 via-white to-emerald-50 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Featured Link</p>
+            <TrackedExternalLink
+              profileId={profile.id}
+              socialLinkId={featuredLink.id}
+              platform={featuredLink.platform}
+              url={featuredLink.url}
+              className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-blue-200 bg-white px-3 py-2 transition hover:border-blue-300"
+            >
+              <span className="truncate text-sm font-semibold text-slate-900">{featuredLink.platform}</span>
+              <span className="truncate text-xs font-medium text-blue-700">Open Now</span>
+            </TrackedExternalLink>
           </section>
         ) : null}
+
+        {links.length ? <SmartLinksSection profileId={profile.id} links={links} /> : null}
 
         {(profile.show_email_public && profile.contact_email) || (profile.show_phone_public && profile.phone_number) ? (
           <section className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
@@ -136,6 +196,17 @@ export default async function UserCardPage({ params }: { params: Promise<Params>
               {profile.show_email_public && profile.contact_email ? <p>Email: {profile.contact_email}</p> : null}
               {profile.show_phone_public && profile.phone_number ? <p>Phone: {profile.phone_number}</p> : null}
             </div>
+          </section>
+        ) : null}
+
+        {profile.custom_section_title || profile.custom_section_content ? (
+          <section className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              {profile.custom_section_title || "More About Me"}
+            </p>
+            <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-700">
+              {profile.custom_section_content || ""}
+            </p>
           </section>
         ) : null}
 
@@ -164,6 +235,21 @@ export default async function UserCardPage({ params }: { params: Promise<Params>
             </div>
           </section>
         )}
+
+        {profile.resume_url ? (
+          <section className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Resume</p>
+            <a
+              href={profile.resume_url}
+              target="_blank"
+              rel="noreferrer"
+              download={profile.resume_filename || "resume"}
+              className="mt-3 inline-flex rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-400"
+            >
+              Download {profile.resume_filename || "Resume"}
+            </a>
+          </section>
+        ) : null}
 
         <section className="mt-7 flex flex-wrap justify-center gap-3">
           <SaveContactButton

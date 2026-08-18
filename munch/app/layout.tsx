@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Baloo_2, Manrope } from "next/font/google";
+import SiteFooter from "@/components/SiteFooter";
 import "./globals.css";
 
 const bodyFont = Manrope({
@@ -25,7 +26,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${bodyFont.variable} ${logoFont.variable} h-full antialiased`}>
-      <body className="min-h-full bg-white text-slate-900">{children}</body>
+      <body className="min-h-full bg-white text-slate-900">
+        {children}
+        <SiteFooter />
+      </body>
     </html>
   );
 }

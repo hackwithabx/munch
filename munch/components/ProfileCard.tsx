@@ -79,6 +79,18 @@ export default function ProfileCard({ profile }: ProfileCardProps) {
           {profile.display_name || profile.username}
         </p>
         <p className="truncate text-sm text-slate-500">@{profile.username}</p>
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em]">
+          {typeof profile.chased_count === "number" ? (
+            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-emerald-700">
+              Chased By {profile.chased_count}
+            </span>
+          ) : null}
+          {typeof profile.view_count === "number" ? (
+            <span className="rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-orange-700">
+              Seen {profile.view_count}
+            </span>
+          ) : null}
+        </div>
         {profile.city ? <p className="mt-1 text-sm text-slate-600">{profile.city}</p> : null}
         {profile.bio ? <p className="mt-2 line-clamp-2 text-sm text-slate-700">{profile.bio}</p> : null}
         {profile.tags?.length ? (

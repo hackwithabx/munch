@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import AnalyticsInteractive from "@/components/AnalyticsInteractive";
 
 function daysAgo(days: number) {
   const d = new Date();
@@ -17,7 +18,20 @@ export default async function DashboardAnalyticsPage() {
     redirect("/login");
   }
 
-  const [profileQuery, weekCountQuery, recentViewsQuery, mostSeenCardsQuery, weeklyViewsGlobalQuery, searchesQuery] = await Promise.all([
+  const [
+    profileQuery,
+    weekCountQuery,
+    recentViewsQuery,
+    mostSeenCardsQuery,
+    weeklyViewsGlobalQuery,
+    searchesQuery,
+    totalLinkClicksQuery,
+    weeklyLinkClicksQuery,
+    recentLinkClicksQuery,
+    platformClicksQuery,
+    chasedByTotalQuery,
+    chasedByWeeklyQuery,
+  ] = await Promise.all([
     supabase.from("profiles").select("view_count, username").eq("id", user.id).single(),
     supabase
       .from("page_views")
@@ -46,6 +60,36 @@ export default async function DashboardAnalyticsPage() {
       .select("normalized_query, searched_at")
       .gte("searched_at", daysAgo(7))
       .limit(3000),
+    supabase
+      .from("link_clicks")
+      .select("id", { count: "exact", head: true })
+      .eq("profile_id", user.id),
+    supabase
+      .from("link_clicks")
+      .select("id", { count: "exact", head: true })
+      .eq("profile_id", user.id)
+      .gte("clicked_at", daysAgo(7)),
+    supabase
+      .from("link_clicks")
+      .select("id, platform, url, clicked_at, referrer")
+      .eq("profile_id", user.id)
+      .order("clicked_at", { ascending: false })
+      .limit(20),
+    supabase
+      .from("link_clicks")
+      .select("platform, clicked_at")
+      .eq("profile_id", user.id)
+      .gte("clicked_at", daysAgo(14))
+      .limit(3000),
+    supabase
+      .from("profile_chases")
+      .select("id", { count: "exact", head: true })
+      .eq("target_profile_id", user.id),
+    supabase
+      .from("profile_chases")
+      .select("id", { count: "exact", head: true })
+      .eq("target_profile_id", user.id)
+      .gte("created_at", daysAgo(7)),
   ]);
 
   const totalViews = profileQuery.data?.view_count ?? 0;
@@ -72,8 +116,19 @@ export default async function DashboardAnalyticsPage() {
     .sort((a, b) => b.viewsThisWeek - a.viewsThisWeek)
     .slice(0, 8);
 
+  const searchRows =
+    searchesQuery.data && searchesQuery.data.length
+      ? searchesQuery.data
+      : (
+          await supabase
+            .from("search_queries")
+            .select("normalized_query, searched_at")
+            .order("searched_at", { ascending: false })
+            .limit(3000)
+        ).data || [];
+
   const searchCounts = new Map<string, number>();
-  (searchesQuery.data || []).forEach((item) => {
+  searchRows.forEach((item) => {
     const term = (item.normalized_query || "").trim();
     if (!term) return;
     searchCounts.set(term, (searchCounts.get(term) || 0) + 1);
@@ -82,90 +137,72 @@ export default async function DashboardAnalyticsPage() {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 12);
 
+  const platformCounts = new Map<string, number>();
+  (platformClicksQuery.data || []).forEach((item) => {
+    const key = (item.platform || "unknown").trim().toLowerCase() || "unknown";
+    platformCounts.set(key, (platformCounts.get(key) || 0) + 1);
+  });
+  const topClickedPlatforms = Array.from(platformCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([platform, count]) => ({ platform, count }));
+
+  const dailyMap = new Map<string, number>();
+  (recentViewsQuery.data || []).forEach((item) => {
+    const d = new Date(item.viewed_at);
+    d.setHours(0, 0, 0, 0);
+    const key = d.toISOString().slice(0, 10);
+    dailyMap.set(key, (dailyMap.get(key) || 0) + 1);
+  });
+
+  const dailySeries = Array.from({ length: 14 }, (_, idx) => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - (13 - idx));
+    const key = d.toISOString().slice(0, 10);
+    return {
+      date: key,
+      label: d.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+      count: dailyMap.get(key) || 0,
+    };
+  });
+
+  const mostSeenCards = (mostSeenCardsQuery.data || []).map((card) => ({
+    username: card.username,
+    display_name: card.display_name,
+    value: card.view_count,
+  }));
+
+  const weeklyTrendingCards = weeklyProfiles.map((card) => ({
+    username: card.username,
+    display_name: card.display_name,
+    value: card.viewsThisWeek,
+  }));
+
   return (
-    <section className="space-y-5">
-      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        <h1 className="text-2xl font-bold text-slate-900">Analytics</h1>
-        <p className="mt-1 text-sm text-slate-600">Simple, owner-facing stats for @{profileQuery.data?.username || "you"}.</p>
-
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs uppercase tracking-wider text-slate-500">Total Views</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900">{totalViews}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs uppercase tracking-wider text-slate-500">This Week</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900">{weeklyViews}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        <h2 className="text-lg font-semibold text-slate-900">Recent Page Views</h2>
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[520px] text-left text-sm">
-            <thead>
-              <tr className="text-slate-500">
-                <th className="pb-2 pr-3 font-medium">Viewed At</th>
-                <th className="pb-2 pr-3 font-medium">Referrer</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(recentViewsQuery.data || []).map((item) => (
-                <tr key={item.id} className="border-t border-slate-100">
-                  <td className="py-2 pr-3 text-slate-700">{new Date(item.viewed_at).toLocaleString()}</td>
-                  <td className="py-2 pr-3 text-slate-600">{item.referrer || "Direct"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <h2 className="text-lg font-semibold text-slate-900">Most Seen Cards (All Time)</h2>
-          <div className="mt-4 space-y-2 text-sm">
-            {(mostSeenCardsQuery.data || []).map((card, index) => (
-              <div key={card.username} className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2">
-                <p className="text-slate-700">
-                  {index + 1}. {card.display_name || card.username} <span className="text-slate-500">@{card.username}</span>
-                </p>
-                <p className="font-semibold text-slate-900">{card.view_count}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <h2 className="text-lg font-semibold text-slate-900">Trending Cards (This Week)</h2>
-          <div className="mt-4 space-y-2 text-sm">
-            {weeklyProfiles.map((card, index) => (
-              <div key={card.id} className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2">
-                <p className="text-slate-700">
-                  {index + 1}. {card.display_name || card.username} <span className="text-slate-500">@{card.username}</span>
-                </p>
-                <p className="font-semibold text-slate-900">{card.viewsThisWeek}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
-
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        <h2 className="text-lg font-semibold text-slate-900">People Are Searching For (This Week)</h2>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {topSearches.map(([term, count]) => (
-            <span
-              key={term}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-slate-50 px-3 py-1.5 text-sm text-slate-700"
-            >
-              <span>{term}</span>
-              <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-slate-600">{count}</span>
-            </span>
-          ))}
-        </div>
-      </section>
-    </section>
+    <AnalyticsInteractive
+      username={profileQuery.data?.username || "you"}
+      totalViews={totalViews}
+      weeklyViews={weeklyViews}
+      totalChasedBy={chasedByTotalQuery.count ?? 0}
+      weeklyChasedBy={chasedByWeeklyQuery.count ?? 0}
+      totalLinkClicks={totalLinkClicksQuery.count ?? 0}
+      weeklyLinkClicks={weeklyLinkClicksQuery.count ?? 0}
+      dailySeries={dailySeries}
+      mostSeenCards={mostSeenCards}
+      weeklyTrendingCards={weeklyTrendingCards}
+      recentViews={recentViewsQuery.data || []}
+      topSearches={topSearches.map(([term, count]) => ({ term, count }))}
+      topClickedPlatforms={topClickedPlatforms}
+      recentLinkClicks={
+        (recentLinkClicksQuery.data || []).map((item) => ({
+          id: item.id,
+          platform: item.platform,
+          url: item.url,
+          clicked_at: item.clicked_at,
+          referrer: item.referrer,
+        }))
+      }
+    />
   );
 }

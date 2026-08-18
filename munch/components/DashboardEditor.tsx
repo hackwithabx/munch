@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import TagInput from "@/components/TagInput";
 import AvatarUploader from "@/components/AvatarUploader";
 import QRCodeUploader from "@/components/QRCodeUploader";
+import ResumeUploader from "@/components/ResumeUploader";
 import type { Profile, SocialLink } from "@/lib/types";
 
 type DashboardEditorProps = {
@@ -62,9 +63,17 @@ export default function DashboardEditor({ userId, initialProfile, initialLinks }
   const supabase = useMemo(() => createClient(), []);
   const [saving, setSaving] = useState(false);
   const [generatingBio, setGeneratingBio] = useState(false);
+  const [showBioModal, setShowBioModal] = useState(false);
+  const [bioDraft, setBioDraft] = useState(initialProfile.bio || "");
   const [bioContext, setBioContext] = useState("");
   const [message, setMessage] = useState<string | null>(null);
-  const [profile, setProfile] = useState(initialProfile);
+  const [profile, setProfile] = useState({
+    ...initialProfile,
+    tags: initialProfile.tags || [],
+    is_public: initialProfile.is_public ?? true,
+    show_email_public: Boolean(initialProfile.show_email_public),
+    show_phone_public: Boolean(initialProfile.show_phone_public),
+  });
   const [links, setLinks] = useState<EditableLink[]>(
     initialLinks.map((item) => ({
       id: item.id,
@@ -91,6 +100,10 @@ export default function DashboardEditor({ userId, initialProfile, initialLinks }
           payment_label: profile.payment_label,
           upi_id: profile.upi_id,
           payment_link: profile.payment_link,
+          custom_section_title: profile.custom_section_title,
+          custom_section_content: profile.custom_section_content,
+          resume_url: profile.resume_url,
+          resume_filename: profile.resume_filename,
           contact_email: profile.contact_email,
           phone_number: profile.phone_number,
           show_email_public: profile.show_email_public,
@@ -158,6 +171,7 @@ export default function DashboardEditor({ userId, initialProfile, initialLinks }
           city: profile.city,
           tags: profile.tags,
           extraContext: bioContext,
+          draftBio: bioDraft,
         }),
       });
 
@@ -168,7 +182,8 @@ export default function DashboardEditor({ userId, initialProfile, initialLinks }
       }
 
       setProfile((prev) => ({ ...prev, bio: json.bio || prev.bio }));
-      setMessage("AI bio generated. Review it and save when ready.");
+      setShowBioModal(false);
+      setMessage("AI bio rewritten. Review it and save when ready.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not generate bio.");
     } finally {
@@ -206,25 +221,48 @@ export default function DashboardEditor({ userId, initialProfile, initialLinks }
               <span className="font-medium text-slate-700">Bio</span>
               <button
                 type="button"
-                onClick={() => void generateBioWithAI()}
+                onClick={() => {
+                  setBioDraft(profile.bio || "");
+                  setShowBioModal(true);
+                }}
                 disabled={generatingBio}
                 className="rounded-lg border border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-60"
               >
-                {generatingBio ? "Writing..." : "Write Bio with AI"}
+                {generatingBio ? "Rewriting..." : "Rewrite Bio with AI"}
               </button>
             </div>
-            <input
-              value={bioContext}
-              onChange={(event) => setBioContext(event.target.value)}
-              placeholder="Optional context for AI: yoga teacher for beginners, weekend workshops"
-              className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-300"
-            />
             <textarea
               value={profile.bio || ""}
               onChange={(event) => setProfile((prev) => ({ ...prev, bio: event.target.value.slice(0, 280) }))}
               rows={4}
               className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:border-blue-300"
             />
+          </label>
+
+          <label className="space-y-1 text-sm sm:col-span-2">
+            <span className="font-medium text-slate-700">Custom Section Title (Optional)</span>
+            <input
+              value={profile.custom_section_title || ""}
+              onChange={(event) =>
+                setProfile((prev) => ({ ...prev, custom_section_title: event.target.value.slice(0, 60) }))
+              }
+              placeholder="Example: Services, What I Offer, Current Focus"
+              className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:border-blue-300"
+            />
+          </label>
+
+          <label className="space-y-1 text-sm sm:col-span-2">
+            <span className="font-medium text-slate-700">Custom Section Content (Optional)</span>
+            <textarea
+              value={profile.custom_section_content || ""}
+              onChange={(event) =>
+                setProfile((prev) => ({ ...prev, custom_section_content: event.target.value.slice(0, 600) }))
+              }
+              rows={4}
+              placeholder="Add anything else you want people to know about you..."
+              className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:border-blue-300"
+            />
+            <p className="text-xs text-slate-500">This block appears on your public card as your personalized section.</p>
           </label>
 
           <label className="space-y-1 text-sm">
@@ -241,7 +279,7 @@ export default function DashboardEditor({ userId, initialProfile, initialLinks }
             <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
               <input
                 type="checkbox"
-                checked={profile.is_public}
+                checked={Boolean(profile.is_public)}
                 onChange={(event) => setProfile((prev) => ({ ...prev, is_public: event.target.checked }))}
               />
               <span>{profile.is_public ? "Visible to everyone" : "Private"}</span>
@@ -268,7 +306,7 @@ export default function DashboardEditor({ userId, initialProfile, initialLinks }
             <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
               <input
                 type="checkbox"
-                checked={profile.show_email_public}
+                checked={Boolean(profile.show_email_public)}
                 onChange={(event) => setProfile((prev) => ({ ...prev, show_email_public: event.target.checked }))}
               />
               <span>{profile.show_email_public ? "Visible on card" : "Hidden"}</span>
@@ -290,7 +328,7 @@ export default function DashboardEditor({ userId, initialProfile, initialLinks }
             <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
               <input
                 type="checkbox"
-                checked={profile.show_phone_public}
+                checked={Boolean(profile.show_phone_public)}
                 onChange={(event) => setProfile((prev) => ({ ...prev, show_phone_public: event.target.checked }))}
               />
               <span>{profile.show_phone_public ? "Visible on card" : "Hidden"}</span>
@@ -362,6 +400,21 @@ export default function DashboardEditor({ userId, initialProfile, initialLinks }
           />
         </div>
 
+        <div className="mt-4">
+          <ResumeUploader
+            userId={userId}
+            value={profile.resume_url}
+            fileName={profile.resume_filename}
+            onUploaded={(url, fileName) =>
+              setProfile((prev) => ({
+                ...prev,
+                resume_url: url,
+                resume_filename: fileName,
+              }))
+            }
+          />
+        </div>
+
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <label className="space-y-1 text-sm">
             <span className="font-medium text-slate-700">Payment Label</span>
@@ -404,6 +457,57 @@ export default function DashboardEditor({ userId, initialProfile, initialLinks }
         </button>
         {message ? <p className="text-sm text-slate-600">{message}</p> : null}
       </div>
+
+      {showBioModal ? (
+        <div className="fixed inset-0 z-[100] overflow-y-auto bg-slate-900/45">
+          <div className="flex min-h-full items-center justify-center px-4 py-6">
+            <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-5 shadow-xl">
+              <h3 className="text-lg font-bold text-slate-900">Rewrite Bio with AI</h3>
+              <p className="mt-1 text-sm text-slate-600">
+                Write your draft below, then AI will rewrite it in a more original and polished style.
+              </p>
+              <div className="mt-4 space-y-3">
+                <label className="block space-y-1 text-sm">
+                  <span className="font-medium text-slate-700">Your Draft Bio</span>
+                  <textarea
+                    value={bioDraft}
+                    onChange={(event) => setBioDraft(event.target.value.slice(0, 600))}
+                    rows={5}
+                    placeholder="Example: I am a web designer from Pune helping local businesses build modern websites quickly."
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:border-blue-300"
+                  />
+                </label>
+                <label className="block space-y-1 text-sm">
+                  <span className="font-medium text-slate-700">Extra Style Context (Optional)</span>
+                  <input
+                    value={bioContext}
+                    onChange={(event) => setBioContext(event.target.value)}
+                    placeholder="Example: make it confident, clean, and modern"
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:border-blue-300"
+                  />
+                </label>
+              </div>
+              <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowBioModal(false)}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:border-slate-400"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void generateBioWithAI()}
+                  disabled={generatingBio || !bioDraft.trim()}
+                  className="rounded-lg border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-60"
+                >
+                  {generatingBio ? "Rewriting..." : "Rewrite Now"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
