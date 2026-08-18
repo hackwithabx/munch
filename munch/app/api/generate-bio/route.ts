@@ -121,12 +121,21 @@ async function generateWithHuggingFace(prompt: string) {
 
 async function generateWithOpenAI(prompt: string, apiKey: string) {
   const openai = new OpenAI({ apiKey });
-  const response = await openai.responses.create({
+  const response = await openai.chat.completions.create({
     model: MODEL,
     temperature: 0.8,
-    input: prompt,
+    messages: [
+      {
+        role: "system",
+        content: "You are a professional bio writer. Write concise, human-friendly bios.",
+      },
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
   });
-  return response.output_text.trim();
+  return response.choices[0]?.message?.content?.trim() || "";
 }
 
 export async function POST(request: NextRequest) {
