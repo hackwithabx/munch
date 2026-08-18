@@ -1,6 +1,6 @@
 {
-  "buildCommand": "cd munch && npm run build",
-  "devCommand": "cd munch && npm run dev",
-  "installCommand": "cd munch && npm install",
-  "outputDirectory": "munch/.next"
+  "root": "munch",
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install"
 }
