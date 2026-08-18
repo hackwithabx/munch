@@ -1,36 +1,134 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Munch
 
-## Getting Started
+**Munch** is a searchable digital identity card platform built with Next.js, React, TypeScript, Tailwind CSS, and Supabase.
 
-First, run the development server:
+## 🚀 Quick Links
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Live App:** [https://munch-murex.vercel.app](https://munch-murex.vercel.app)
+- **GitHub Repository:** [hackwithabx/munch](https://github.com/hackwithabx/munch)
+- **App Code:** Inside the `munch/` folder (monorepo structure)
+
+## 📋 Project Overview
+
+**Munch** lets users:
+- Create a searchable public profile card (like a digital visiting card)
+- Search for people by name, username, skills, city, or tags
+- View public cards at `/{username}`
+- Manage their profile, links, avatar, and visibility from a dashboard
+
+## 🏗️ Project Structure
+
+This is a **monorepo** with application code in the `munch/` subfolder:
+
+```
+Munch/
+├── munch/                    # Main app folder
+│   ├── app/                  # Next.js App Router (pages, API routes)
+│   ├── components/           # React components
+│   ├── lib/                  # Utilities (Supabase client, types)
+│   ├── supabase/migrations/  # Database schema
+│   ├── .env.local            # Environment variables (local)
+│   ├── package.json
+│   └── next.config.ts
+├── README.md                 # This file
+└── AGENTS.md, CLAUDE.md      # AI agent configuration
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🚀 Getting Started
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 1. Prerequisites
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Node.js 18+ (tested with 22.22.2)
+- A Supabase project (free tier works)
+- Vercel account (for deployment)
 
-## Learn More
+### 2. Local Development
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+cd munch
+npm install
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 3. Environment Configuration
 
-## Deploy on Vercel
+Create `munch/.env.local` with:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_KEY  # For admin operations only
+OPENAI_API_KEY=YOUR_KEY  # Optional, for AI bio generation
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Get these values from your Supabase Dashboard → Settings → API Keys.
+
+### 4. Database Setup
+
+Run the SQL migrations in your Supabase SQL Editor:
+
+1. [munch/supabase/migrations/0001_munch_init.sql](munch/supabase/migrations/0001_munch_init.sql) - Core schema
+2. [munch/supabase/migrations/0002_search_insights.sql](munch/supabase/migrations/0002_search_insights.sql) - Search analytics
+3. [munch/supabase/migrations/0003_public_contact_fields.sql](munch/supabase/migrations/0003_public_contact_fields.sql) - Public profile fields
+
+Plus additional migrations in the same directory for other features.
+
+## 📚 Documentation
+
+- **[DEPLOYMENT.md](munch/DEPLOYMENT.md)** - Complete Vercel deployment guide
+- **[context.md](munch/context.md)** - Architecture and tech stack details
+- **[munch/README.md](munch/README.md)** - App-specific setup and routes
+
+## ✅ Current Status
+
+✅ **Production:** Live at [https://munch-murex.vercel.app](https://munch-murex.vercel.app)  
+✅ **Supabase:** Configured with valid credentials  
+✅ **Auth:** Signup/login functional  
+✅ **Dev Server:** Running locally at http://localhost:3000  
+✅ **Build:** Vercel deployment stable
+
+## 📦 Main Routes
+
+- `/` - Search homepage
+- `/[username]` - Public profile card
+- `/login`, `/signup` - Authentication
+- `/dashboard` - User profile editor
+- `/dashboard/analytics` - View analytics
+- `/trending` - Trending profiles
+- `/about`, `/how-to-use`, `/privacy`, `/terms` - Info pages
+
+## 🔌 API Endpoints
+
+- `POST /api/search` - Search profiles
+- `POST /api/surprise` - Random profile
+- `POST /api/log-search` - Track searches
+- `POST /api/track-view` - Track views
+- `POST /api/generate-bio` - AI bio generation
+- `POST /api/chase` - Profile chase/follow
+- `POST /api/chase-note` - Chase notes
+
+## 🛠️ Development Commands
+
+```bash
+npm run dev      # Start dev server
+npm run build    # Production build
+npm run lint     # Lint with ESLint
+npm run seed:dummy   # Seed 50 test profiles
+```
+
+## 📝 Tech Stack
+
+- **Frontend:** Next.js 16.2.10 (App Router), React 19, TypeScript, Tailwind CSS
+- **Backend:** Supabase (PostgreSQL, Auth, Storage)
+- **Deployment:** Vercel (serverless functions + static)
+- **Runtime:** Node.js 22+ / Edge Functions
+
+## 📄 Notes
+
+- This is a **monorepo** with app code in `munch/`
+- Vercel is configured to build from the `munch/` directory
+- Environment variables must be set in both `.env.local` and Vercel dashboard
+- Payment fields are display-only and do not process transactions
+- Route protection is enforced via `munch/proxy.ts` middleware

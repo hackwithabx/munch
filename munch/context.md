@@ -48,6 +48,66 @@ Optional for AI bio generation:
 
 Required for admin seeding script:
 - `SUPABASE_SERVICE_ROLE_KEY`
+
+## 5) Current Status (August 18, 2026)
+
+### ✅ Live & Working
+- Production URL: [https://munch-murex.vercel.app](https://munch-murex.vercel.app)
+- Supabase properly configured with valid credentials
+- Auth (signup/login) functional
+- Dev server running at http://localhost:3000
+- All 21 routes generating successfully on Vercel
+- Monorepo Vercel config working correctly
+
+### Recent Fixes
+- Fixed Vercel monorepo configuration (app code in `munch/` subfolder)
+- Updated to Next.js 16.2.10 with Turbopack
+- Fixed OpenAI API calls (deprecated endpoint → chat completions)
+- Supabase environment variables synced to Vercel production/preview
+- Dev server with proper hot-reload and environment loading
+
+### Database Schema
+Full Postgres schema deployed via migrations:
+- User profiles with searchable fields
+- Social links with verification
+- Page view tracking
+- Search query logging
+- Storage buckets for avatars and resumes
+- RLS policies for data security
+- Auth triggers for user lifecycle
+
+## 6) Key Files Reference
+
+**Frontend (User-facing):**
+- `app/page.tsx` - Homepage with search
+- `app/[username]/page.tsx` - Public profile card
+- `app/(auth)/login/page.tsx`, `app/(auth)/signup/page.tsx` - Auth pages
+- `app/dashboard/page.tsx` - User profile editor
+- `components/AuthForm.tsx` - Signup/login form
+
+**Backend (API & Logic):**
+- `app/api/search/route.ts` - Search endpoint
+- `app/api/generate-bio/route.ts` - AI bio generation
+- `lib/supabase/client.ts` - Browser Supabase client
+- `lib/supabase/server.ts` - Server-side Supabase client
+- `proxy.ts` - Route protection middleware
+
+**Database:**
+- `supabase/migrations/0001_munch_init.sql` - Core schema
+- `supabase/migrations/000X_*.sql` - Feature-specific schemas
+
+## 7) Deployment Targets
+
+**Production:** Vercel
+- Automatic deploys from `main` branch
+- Environment variables via Vercel dashboard
+- Edge Functions for middleware/proxy
+- Serverless functions for API routes
+
+**Local:** Next.js dev server
+- Hot reload enabled
+- Turbopack compilation
+- Same environment variables as production
 - optional `DUMMY_CARD_COUNT`
 
 Files:

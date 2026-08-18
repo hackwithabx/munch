@@ -98,6 +98,78 @@ After deployment completes:
 |----------|----------|--------|-------|
 | `NEXT_PUBLIC_SUPABASE_URL` | ✅ Yes | Supabase Dashboard | Public, safe to expose |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ Yes | Supabase Dashboard | Public, safe to expose |
+| `SUPABASE_SERVICE_ROLE_KEY` | ⚠️ Admin only | Supabase Dashboard | For seed script and admin operations. **Never expose to browser.** |
+| `OPENAI_API_KEY` | ❌ Optional | OpenAI Platform | Enables AI bio generation on dashboard. Leave blank to disable. |
+
+## ✅ Current Status
+
+### Production
+- **URL:** [https://munch-murex.vercel.app](https://munch-murex.vercel.app)
+- **Status:** ✅ Live and working
+- **Last Deploy:** August 18, 2026
+- **Build:** Next.js 16.2.10 (Turbopack)
+- **Supabase:** Connected and authenticated
+
+### Features Verified
+- ✅ Homepage loads without Supabase warning
+- ✅ Signup page renders correctly
+- ✅ Authentication with Supabase working
+- ✅ Database schema deployed
+- ✅ Search functionality ready
+- ✅ All 21 routes generating correctly
+
+## Troubleshooting
+
+### "Supabase is not configured yet"
+This warning means:
+- Environment variables are not set in Vercel
+- Or Supabase URL/anon key are invalid or stale
+
+**Fix:** Update environment variables in Vercel project settings:
+1. Go to [vercel.com](https://vercel.com) → Your Project → Settings → Environment Variables
+2. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+3. Redeploy: `vercel deploy --prod --yes`
+
+### "Failed to fetch" during signup
+This error indicates:
+- Invalid Supabase URL (DNS resolution failure)
+- Network connectivity issue
+- Supabase project down
+
+**Fix:**
+1. Verify Supabase project is active and accessible
+2. Confirm `NEXT_PUBLIC_SUPABASE_URL` is correct in Vercel environment
+3. Check that URL resolves: `curl -I https://YOUR_PROJECT.supabase.co`
+4. Redeploy after fixing
+
+### Local dev server won't start
+```bash
+# Make sure you're in the munch folder
+cd munch
+
+# Kill any existing processes
+pkill -f "next dev"
+
+# Clear cache and reinstall
+rm -rf .next node_modules
+npm install
+npm run dev
+```
+
+## Next Steps
+
+1. **Verify deployment:** Visit [https://munch-murex.vercel.app](https://munch-murex.vercel.app)
+2. **Test signup:** Try creating an account
+3. **Seed dummy data:** `npm run seed:dummy` (if needed)
+4. **Monitor logs:** Use `vercel logs --environment production` to debug
+
+## Additional Resources
+
+- [Munch App README](./README.md) - App-specific documentation
+- [Context & Architecture](./context.md) - Technical overview
+- [Next.js 16 Docs](https://nextjs.org/docs)
+- [Supabase Docs](https://supabase.com/docs)
+- [Vercel Docs](https://vercel.com/docs)
 | `SUPABASE_SERVICE_ROLE_KEY` | ❌ No | Supabase Dashboard | Only needed for dummy seeding |
 | `OPENAI_API_KEY` | ❌ No | OpenAI Platform | Optional, for AI bio generation |
 
